@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 @Path("/categorias")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Transactional
 public class CategoriaResource {
 
     @Inject
@@ -37,6 +36,7 @@ public class CategoriaResource {
     }
 
     @POST
+    @Transactional
     public Response criar(CategoriaDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
@@ -61,6 +61,7 @@ public class CategoriaResource {
     }
 
     @PUT
+    @Transactional
     @Path("/{id}")
     public Response atualizar(@PathParam("id") Long id, CategoriaDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
@@ -84,6 +85,7 @@ public class CategoriaResource {
     }
 
     @DELETE
+    @Transactional
     @Path("/{id}")
     public Response deletar(@PathParam("id") Long id) {
         Long usuarioId = userPrincipal.getUserId();

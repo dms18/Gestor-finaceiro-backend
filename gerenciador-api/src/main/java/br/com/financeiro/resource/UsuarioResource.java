@@ -12,7 +12,6 @@ import jakarta.ws.rs.core.Response;
 @Path("/usuarios")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Transactional
 public class UsuarioResource {
 
     @Inject
@@ -39,6 +38,7 @@ public class UsuarioResource {
     }
 
     @PUT
+    @Transactional
     @Path("/perfil")
     public Response updatePerfil(UsuarioDTO dto) {
         Long usuarioId = userPrincipal.getUserId();

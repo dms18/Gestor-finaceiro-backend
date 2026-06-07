@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 @Path("/sazonalidade")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Transactional
 public class SazonalidadeResource {
 
     @Inject
@@ -57,6 +56,7 @@ public class SazonalidadeResource {
     }
 
     @POST
+    @Transactional
     public Response criar(SazonalidadeDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
@@ -83,6 +83,7 @@ public class SazonalidadeResource {
     }
 
     @PUT
+    @Transactional
     @Path("/{id}")
     public Response atualizar(@PathParam("id") Long id, SazonalidadeDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
@@ -108,6 +109,7 @@ public class SazonalidadeResource {
     }
 
     @DELETE
+    @Transactional
     @Path("/{id}")
     public Response deletar(@PathParam("id") Long id) {
         Long usuarioId = userPrincipal.getUserId();

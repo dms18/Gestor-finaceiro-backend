@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 @Path("/transacoes")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Transactional
 public class TransacaoResource {
 
     @Inject
@@ -116,6 +115,7 @@ public class TransacaoResource {
     }
 
     @POST
+    @Transactional
     public Response criar(TransacaoDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
@@ -152,6 +152,7 @@ public class TransacaoResource {
     }
 
     @PUT
+    @Transactional
     @Path("/{id}")
     public Response atualizar(@PathParam("id") Long id, TransacaoDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
@@ -178,6 +179,7 @@ public class TransacaoResource {
     }
 
     @DELETE
+    @Transactional
     @Path("/{id}")
     public Response deletar(@PathParam("id") Long id) {
         Long usuarioId = userPrincipal.getUserId();
