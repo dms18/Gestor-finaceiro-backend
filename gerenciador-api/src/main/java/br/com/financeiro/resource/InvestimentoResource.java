@@ -6,6 +6,7 @@ import br.com.financeiro.entity.Usuario;
 import br.com.financeiro.security.UserPrincipal;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -47,7 +48,7 @@ public class InvestimentoResource {
 
     @POST
     @Transactional
-    public Response criar(InvestimentoDTO dto) {
+    public Response criar(@Valid InvestimentoDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -77,7 +78,7 @@ public class InvestimentoResource {
     @PUT
     @Transactional
     @Path("/{id}")
-    public Response atualizar(@PathParam("id") Long id, InvestimentoDTO dto) {
+    public Response atualizar(@PathParam("id") Long id, @Valid InvestimentoDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();

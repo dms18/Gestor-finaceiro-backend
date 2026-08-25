@@ -1,10 +1,14 @@
 package br.com.financeiro.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 
 public class InvestimentoDTO {
     public Long id;
+
+    @NotBlank(message = "Título é obrigatório")
     public String titulo;
+
     public String descricao;
     public BigDecimal valorEstimado;
     public BigDecimal retornoEstimado;

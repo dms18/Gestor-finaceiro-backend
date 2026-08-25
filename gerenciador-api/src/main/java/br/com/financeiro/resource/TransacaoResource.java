@@ -6,6 +6,7 @@ import br.com.financeiro.entity.*;
 import br.com.financeiro.security.UserPrincipal;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -116,7 +117,7 @@ public class TransacaoResource {
 
     @POST
     @Transactional
-    public Response criar(TransacaoDTO dto) {
+    public Response criar(@Valid TransacaoDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -136,10 +137,22 @@ public class TransacaoResource {
         transacao.usuario = usuario;
 
         if (dto.categoriaId != null) {
-            transacao.categoria = Categoria.findById(dto.categoriaId);
+            Categoria categoria = Categoria.findById(dto.categoriaId);
+            if (categoria == null || !categoria.usuario.id.equals(usuarioId)) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"message\":\"Categoria inválida\"}")
+                        .build();
+            }
+            transacao.categoria = categoria;
         }
         if (dto.contaId != null) {
-            transacao.conta = Conta.findById(dto.contaId);
+            Conta conta = Conta.findById(dto.contaId);
+            if (conta == null || !conta.usuario.id.equals(usuarioId)) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"message\":\"Conta inválida\"}")
+                        .build();
+            }
+            transacao.conta = conta;
         }
 
         transacao.persist();
@@ -154,7 +167,7 @@ public class TransacaoResource {
     @PUT
     @Transactional
     @Path("/{id}")
-    public Response atualizar(@PathParam("id") Long id, TransacaoDTO dto) {
+    public Response atualizar(@PathParam("id") Long id, @Valid TransacaoDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -169,6 +182,26 @@ public class TransacaoResource {
         transacao.valor = dto.valor;
         transacao.data = dto.data;
         transacao.tipo = Transacao.TipoTransacao.valueOf(dto.tipo);
+
+        if (dto.categoriaId != null) {
+            Categoria categoria = Categoria.findById(dto.categoriaId);
+            if (categoria == null || !categoria.usuario.id.equals(usuarioId)) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"message\":\"Categoria inválida\"}")
+                        .build();
+            }
+            transacao.categoria = categoria;
+        }
+        if (dto.contaId != null) {
+            Conta conta = Conta.findById(dto.contaId);
+            if (conta == null || !conta.usuario.id.equals(usuarioId)) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"message\":\"Conta inválida\"}")
+                        .build();
+            }
+            transacao.conta = conta;
+        }
+
         transacao.persist();
 
         TransacaoDTO response = new TransacaoDTO(transacao.id, transacao.descricao, transacao.valor,

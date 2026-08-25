@@ -1,5 +1,6 @@
 package br.com.financeiro.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -20,4 +21,12 @@ public class RegisterRequest {
 
     @NotBlank(message = "Perfil é obrigatório")
     public String perfil;
+
+    /**
+     * Consentimento LGPD: o usuário precisa aceitar os Termos de Uso e a
+     * Política de Privacidade para criar a conta. Sem o aceite (true), o
+     * cadastro é rejeitado com 400.
+     */
+    @AssertTrue(message = "É necessário aceitar os Termos de Uso e a Política de Privacidade")
+    public boolean aceiteTermos;
 }

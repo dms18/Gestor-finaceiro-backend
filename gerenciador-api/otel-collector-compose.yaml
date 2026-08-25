@@ -1,0 +1,22 @@
+# Sobe o OpenTelemetry Collector isolado, ao lado da API.
+#
+# O nome é propositalmente diferente de "compose.yaml" para NÃO ser
+# auto-gerenciado pelo Dev Services Compose do Quarkus — o controle é explícito:
+#
+#   export APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=...;IngestionEndpoint=..."
+#   docker compose -f otel-collector-compose.yaml up
+#
+# A connection string do Application Insights vem de variável de ambiente do
+# shell (nunca fica hardcoded no repositório).
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    environment:
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+    ports:
+      - "4317:4317"   # OTLP/gRPC
+      - "4318:4318"   # OTLP/HTTP

@@ -1,0 +1,30 @@
+# Configuração do OpenTelemetry Collector.
+# Recebe telemetria OTLP da aplicação Quarkus e a encaminha ao Azure
+# Application Insights (exporter azuremonitor). O exporter "debug" imprime os
+# spans/logs no console do Collector para verificação local imediata.
+#
+# O exporter "azuremonitor" só existe na imagem contrib:
+#   otel/opentelemetry-collector-contrib
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: detailed
+  azuremonitor:
+    connection_string: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug, azuremonitor]
+    logs:
+      receivers: [otlp]
+      exporters: [debug, azuremonitor]

@@ -20,6 +20,14 @@ public class Conta extends PanacheEntity {
     @NotBlank(message = "Nome da conta é obrigatório")
     public String nome;
 
+    /** Nome da instituição financeira (ex.: "Banco do Brasil", "Nubank"). */
+    @Column(name = "instituicao")
+    public String instituicao;
+
+    /** Número da conta bancária. */
+    @Column(name = "numero_conta")
+    public String numeroConta;
+
     @Enumerated(EnumType.STRING)
     @NotNull
     public TipoConta tipo;

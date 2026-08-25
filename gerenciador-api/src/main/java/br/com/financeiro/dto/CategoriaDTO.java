@@ -1,9 +1,16 @@
 package br.com.financeiro.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CategoriaDTO {
     public Long id;
+
+    @NotBlank(message = "Nome da categoria é obrigatório")
     public String nome;
+
+    @NotBlank(message = "Tipo da categoria é obrigatório")
     public String tipo;
+
     public String cor;
     public String icone;
     public Long usuarioId;

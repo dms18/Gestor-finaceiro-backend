@@ -18,6 +18,9 @@ import jakarta.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 public class AuthResource {
 
+    /** Versão vigente dos Termos de Uso / Política de Privacidade aceita no cadastro. */
+    public static final String TERMOS_VERSAO = "1.0 (2026-08-24)";
+
     @Inject
     JwtService jwtService;
 
@@ -42,19 +45,22 @@ public class AuthResource {
                     .build();
         }
 
+        return Response.ok(montarResposta(usuario)).build();
+    }
+
+    private LoginResponse montarResposta(Usuario usuario) {
         String token = jwtService.generateToken(usuario.id, usuario.email);
-        LoginResponse response = new LoginResponse(
+        return new LoginResponse(
                 token,
                 jwtService.getExpirationTime(),
                 new LoginResponse.UsuarioDTO(
                         usuario.id,
                         usuario.nome,
                         usuario.email,
-                        usuario.perfil.toString()
+                        usuario.perfil.toString(),
+                        usuario.interfaceInicial != null ? usuario.interfaceInicial.toString() : null
                 )
         );
-
-        return Response.ok(response).build();
     }
 
     @POST
@@ -74,21 +80,14 @@ public class AuthResource {
         usuario.cpf = request.cpf;
         usuario.cnpj = request.cnpj;
         usuario.perfil = Usuario.TipoPerfil.valueOf(request.perfil);
+        // Interface inicial começa igual ao perfil do usuário (PF, PJ ou AMBOS).
+        usuario.interfaceInicial = usuario.perfil;
+        usuario.aceitouTermos = request.aceiteTermos;
+        usuario.termosVersao = TERMOS_VERSAO;
+        usuario.termosAceitosEm = java.time.LocalDateTime.now();
         usuario.persist();
 
-        String token = jwtService.generateToken(usuario.id, usuario.email);
-        LoginResponse response = new LoginResponse(
-                token,
-                jwtService.getExpirationTime(),
-                new LoginResponse.UsuarioDTO(
-                        usuario.id,
-                        usuario.nome,
-                        usuario.email,
-                        usuario.perfil.toString()
-                )
-        );
-
-        return Response.status(Response.Status.CREATED).entity(response).build();
+        return Response.status(Response.Status.CREATED).entity(montarResposta(usuario)).build();
     }
 }
 

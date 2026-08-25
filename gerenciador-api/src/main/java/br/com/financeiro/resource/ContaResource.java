@@ -6,6 +6,7 @@ import br.com.financeiro.entity.Usuario;
 import br.com.financeiro.security.UserPrincipal;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -29,7 +30,7 @@ public class ContaResource {
 
         List<Conta> contas = Conta.list("usuario.id", usuarioId);
         List<ContaDTO> dtos = contas.stream()
-                .map(c -> new ContaDTO(c.id, c.nome, c.tipo.toString(), c.saldo, c.tipoPessoa.toString(), c.usuario.id))
+                .map(this::toDTO)
                 .collect(Collectors.toList());
 
         return Response.ok(dtos).build();
@@ -37,7 +38,7 @@ public class ContaResource {
 
     @POST
     @Transactional
-    public Response criar(ContaDTO dto) {
+    public Response criar(@Valid ContaDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -50,20 +51,21 @@ public class ContaResource {
 
         Conta conta = new Conta();
         conta.nome = dto.nome;
+        conta.instituicao = dto.instituicao;
+        conta.numeroConta = dto.numeroConta;
         conta.tipo = Conta.TipoConta.valueOf(dto.tipo);
         conta.saldo = dto.saldo;
         conta.tipoPessoa = Conta.TipoPessoa.valueOf(dto.tipoPessoa);
         conta.usuario = usuario;
         conta.persist();
 
-        ContaDTO response = new ContaDTO(conta.id, conta.nome, conta.tipo.toString(), conta.saldo, conta.tipoPessoa.toString(), conta.usuario.id);
-        return Response.status(Response.Status.CREATED).entity(response).build();
+        return Response.status(Response.Status.CREATED).entity(toDTO(conta)).build();
     }
 
     @PUT
     @Transactional
     @Path("/{id}")
-    public Response atualizar(@PathParam("id") Long id, ContaDTO dto) {
+    public Response atualizar(@PathParam("id") Long id, @Valid ContaDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -75,12 +77,14 @@ public class ContaResource {
         }
 
         conta.nome = dto.nome;
+        conta.instituicao = dto.instituicao;
+        conta.numeroConta = dto.numeroConta;
         conta.tipo = Conta.TipoConta.valueOf(dto.tipo);
         conta.saldo = dto.saldo;
+        conta.tipoPessoa = Conta.TipoPessoa.valueOf(dto.tipoPessoa);
         conta.persist();
 
-        ContaDTO response = new ContaDTO(conta.id, conta.nome, conta.tipo.toString(), conta.saldo, conta.tipoPessoa.toString(), conta.usuario.id);
-        return Response.ok(response).build();
+        return Response.ok(toDTO(conta)).build();
     }
 
     @DELETE
@@ -99,5 +103,12 @@ public class ContaResource {
 
         conta.delete();
         return Response.noContent().build();
+    }
+
+    private ContaDTO toDTO(Conta conta) {
+        return new ContaDTO(
+                conta.id, conta.nome, conta.instituicao, conta.numeroConta,
+                conta.tipo.toString(), conta.saldo, conta.tipoPessoa.toString(), conta.usuario.id
+        );
     }
 }

@@ -6,6 +6,7 @@ import br.com.financeiro.entity.Usuario;
 import br.com.financeiro.security.UserPrincipal;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -57,7 +58,7 @@ public class SazonalidadeResource {
 
     @POST
     @Transactional
-    public Response criar(SazonalidadeDTO dto) {
+    public Response criar(@Valid SazonalidadeDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -85,7 +86,7 @@ public class SazonalidadeResource {
     @PUT
     @Transactional
     @Path("/{id}")
-    public Response atualizar(@PathParam("id") Long id, SazonalidadeDTO dto) {
+    public Response atualizar(@PathParam("id") Long id, @Valid SazonalidadeDTO dto) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();

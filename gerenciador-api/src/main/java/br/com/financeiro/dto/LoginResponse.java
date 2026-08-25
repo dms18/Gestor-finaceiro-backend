@@ -16,12 +16,14 @@ public class LoginResponse {
         public String nome;
         public String email;
         public String perfil;
+        public String interfaceInicial;
 
-        public UsuarioDTO(Long id, String nome, String email, String perfil) {
+        public UsuarioDTO(Long id, String nome, String email, String perfil, String interfaceInicial) {
             this.id = id;
             this.nome = nome;
             this.email = email;
             this.perfil = perfil;
+            this.interfaceInicial = interfaceInicial;
         }
     }
 }
