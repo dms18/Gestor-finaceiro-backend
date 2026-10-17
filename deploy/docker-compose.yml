@@ -1,0 +1,48 @@
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: gestor_mei
+      MARIADB_USER: gestor
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    command: --innodb-buffer-pool-size=64M --max-connections=30 --character-set-server=utf8mb4
+    volumes: ["./db:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 10
+    mem_limit: 220m
+
+  api:
+    image: gestor-api:latest
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://db:3306/gestor_mei
+      QUARKUS_DATASOURCE_USERNAME: gestor
+      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_CRYPTO_SECRET: ${APP_CRYPTO_SECRET}
+      QUARKUS_HTTP_CORS_ORIGINS: ${CORS_ORIGIN}
+      SMALLRYE_JWT_SIGN_KEY_LOCATION: file:/keys/privateKey.pem
+      MP_JWT_VERIFY_PUBLICKEY_LOCATION: file:/keys/publicKey.pem
+      QUARKUS_OTEL_SDK_DISABLED: "true"
+      QUARKUS_LOG_FILE_ENABLE: "true"
+      QUARKUS_LOG_FILE_PATH: /var/log/gerenciador/app.log
+      QUARKUS_LOG_FILE_ROTATION_MAX_FILE_SIZE: 10M
+      QUARKUS_LOG_FILE_ROTATION_MAX_BACKUP_INDEX: "5"
+      JAVA_OPTS_APPEND: "-Xmx256m -Xss512k -Dquarkus.http.host=0.0.0.0"
+    volumes: ["./keys:/keys:ro", "./logs:/var/log/gerenciador"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    mem_limit: 400m
+
+  web:
+    image: gestor-web:latest
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["80:80"]
+    mem_limit: 50m

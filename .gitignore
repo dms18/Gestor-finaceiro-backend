@@ -1,0 +1,6 @@
+# Segredos e artefatos de deploy (nunca versionar)
+deploy/secrets/
+.env
+*.apk
+dev-server.log
+private-key.pem
