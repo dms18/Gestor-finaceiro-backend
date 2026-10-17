@@ -1,5 +1,6 @@
 package br.com.financeiro.resource;
 
+import br.com.financeiro.entity.Transacao;
 import br.com.financeiro.dto.CategoriaDTO;
 import br.com.financeiro.entity.Categoria;
 import br.com.financeiro.entity.Usuario;
@@ -77,8 +78,8 @@ public class CategoriaResource {
 
         categoria.nome = dto.nome;
         categoria.tipo = Categoria.TipoCategoria.valueOf(dto.tipo);
-        categoria.cor = dto.cor;
-        categoria.icone = dto.icone;
+        categoria.cor = dto.cor != null ? dto.cor : categoria.cor;
+        categoria.icone = dto.icone != null ? dto.icone : categoria.icone;
         categoria.persist();
 
         CategoriaDTO response = new CategoriaDTO(categoria.id, categoria.nome, categoria.tipo.toString(), categoria.cor, categoria.icone, categoria.usuario.id);
@@ -97,6 +98,13 @@ public class CategoriaResource {
         Categoria categoria = Categoria.findById(id);
         if (categoria == null || !categoria.usuario.id.equals(usuarioId)) {
             return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        long vinculadas = Transacao.count("categoria.id", id);
+        if (vinculadas > 0) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity("{\"message\":\"Não é possível excluir: há " + vinculadas + " transação(ões) usando esta categoria.\"}")
+                    .build();
         }
 
         categoria.delete();

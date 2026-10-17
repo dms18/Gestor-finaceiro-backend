@@ -115,9 +115,22 @@ public class TransacaoResource {
         return Response.ok(resumo).build();
     }
 
+    private static boolean dataPlausivel(java.time.LocalDate data) {
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        return data != null
+                && !data.isBefore(java.time.LocalDate.of(2000, 1, 1))
+                && !data.isAfter(hoje.plusYears(10));
+    }
+
     @POST
     @Transactional
     public Response criar(@Valid TransacaoDTO dto) {
+        if (!dataPlausivel(dto.data)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"Data fora do intervalo permitido (a partir de 2000 e até 10 anos à frente)\"}")
+                    .build();
+        }
+
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -168,6 +181,12 @@ public class TransacaoResource {
     @Transactional
     @Path("/{id}")
     public Response atualizar(@PathParam("id") Long id, @Valid TransacaoDTO dto) {
+        if (!dataPlausivel(dto.data)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"Data fora do intervalo permitido (a partir de 2000 e até 10 anos à frente)\"}")
+                    .build();
+        }
+
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();

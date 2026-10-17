@@ -1,5 +1,7 @@
 package br.com.financeiro.dto;
 
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -10,10 +12,12 @@ public class TransacaoDTO {
     public Long id;
 
     @NotBlank(message = "Descrição é obrigatória")
+    @Size(max = 200, message = "Descrição deve ter no máximo 200 caracteres")
     public String descricao;
 
     @NotNull(message = "Valor é obrigatório")
     @Positive(message = "Valor deve ser maior que zero")
+    @Digits(integer = 13, fraction = 2, message = "Valor inválido: use até 2 casas decimais")
     public BigDecimal valor;
 
     @NotNull(message = "Data é obrigatória")

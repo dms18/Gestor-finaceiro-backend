@@ -1,5 +1,6 @@
 package br.com.financeiro.resource;
 
+import br.com.financeiro.security.DocumentoUtil;
 import br.com.financeiro.dto.FotoPerfilRequest;
 import br.com.financeiro.dto.InterfaceInicialRequest;
 import br.com.financeiro.dto.UsuarioDTO;
@@ -52,9 +53,30 @@ public class UsuarioResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
+        if (dto == null || dto.nome == null || dto.nome.isBlank() || dto.nome.length() > 120) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"Nome é obrigatório (até 120 caracteres)\"}")
+                    .build();
+        }
+        if (dto.email != null && !dto.email.isBlank() && !dto.email.equalsIgnoreCase(usuario.email)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"Não é possível alterar o e-mail da conta\"}")
+                    .build();
+        }
+        if (!DocumentoUtil.vazio(dto.cpf) && !DocumentoUtil.cpfValido(dto.cpf)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"CPF inválido\"}")
+                    .build();
+        }
+        if (!DocumentoUtil.vazio(dto.cnpj) && !DocumentoUtil.cnpjValido(dto.cnpj)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"CNPJ inválido\"}")
+                    .build();
+        }
+
         usuario.nome = dto.nome;
-        usuario.cpf = dto.cpf;
-        usuario.cnpj = dto.cnpj;
+        usuario.cpf = DocumentoUtil.vazio(dto.cpf) ? null : dto.cpf;
+        usuario.cnpj = DocumentoUtil.vazio(dto.cnpj) ? null : dto.cnpj;
         usuario.persist();
 
         return Response.ok(toDTO(usuario)).build();

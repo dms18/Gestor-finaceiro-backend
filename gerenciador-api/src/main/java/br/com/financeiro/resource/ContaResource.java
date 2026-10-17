@@ -1,5 +1,6 @@
 package br.com.financeiro.resource;
 
+import br.com.financeiro.entity.Transacao;
 import br.com.financeiro.dto.ContaDTO;
 import br.com.financeiro.entity.Conta;
 import br.com.financeiro.entity.Usuario;
@@ -99,6 +100,13 @@ public class ContaResource {
         Conta conta = Conta.findById(id);
         if (conta == null || !conta.usuario.id.equals(usuarioId)) {
             return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        long vinculadas = Transacao.count("conta.id", id);
+        if (vinculadas > 0) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity("{\"message\":\"Não é possível excluir: há " + vinculadas + " transação(ões) vinculada(s) a esta conta.\"}")
+                    .build();
         }
 
         conta.delete();

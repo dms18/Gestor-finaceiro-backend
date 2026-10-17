@@ -1,5 +1,7 @@
 package br.com.financeiro.resource;
 
+import br.com.financeiro.security.DocumentoUtil;
+import br.com.financeiro.security.LoginAttemptService;
 import br.com.financeiro.dto.LoginRequest;
 import br.com.financeiro.dto.LoginResponse;
 import br.com.financeiro.dto.RegisterRequest;
@@ -27,24 +29,38 @@ public class AuthResource {
     @Inject
     PasswordService passwordService;
 
+    @Inject
+    LoginAttemptService loginAttempts;
+
     @POST
     @Path("/login")
     @Transactional
     public Response login(@Valid LoginRequest request) {
+        long bloqueio = loginAttempts.segundosBloqueado(request.email);
+        if (bloqueio > 0) {
+            return Response.status(429)
+                    .header("Retry-After", String.valueOf(bloqueio))
+                    .entity("{\"message\":\"Muitas tentativas de login. Tente novamente em alguns minutos.\"}")
+                    .build();
+        }
+
         Usuario usuario = Usuario.findByEmail(request.email);
 
         if (usuario == null) {
+            loginAttempts.registrarFalha(request.email);
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("{\"message\":\"Email ou senha incorretos\"}")
                     .build();
         }
 
         if (!passwordService.verify(request.senha, usuario.senhaHash)) {
+            loginAttempts.registrarFalha(request.email);
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("{\"message\":\"Email ou senha incorretos\"}")
                     .build();
         }
 
+        loginAttempts.registrarSucesso(request.email);
         return Response.ok(montarResposta(usuario)).build();
     }
 
@@ -67,6 +83,17 @@ public class AuthResource {
     @Path("/register")
     @Transactional
     public Response register(@Valid RegisterRequest request) {
+        if (!DocumentoUtil.vazio(request.cpf) && !DocumentoUtil.cpfValido(request.cpf)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"CPF inválido\"}")
+                    .build();
+        }
+        if (!DocumentoUtil.vazio(request.cnpj) && !DocumentoUtil.cnpjValido(request.cnpj)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"CNPJ inválido\"}")
+                    .build();
+        }
+
         if (Usuario.findByEmail(request.email) != null) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"message\":\"Email já cadastrado\"}")

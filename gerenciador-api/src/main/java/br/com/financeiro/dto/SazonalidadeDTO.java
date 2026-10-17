@@ -1,5 +1,6 @@
 package br.com.financeiro.dto;
 
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -9,6 +10,7 @@ public class SazonalidadeDTO {
     public Long id;
 
     @NotBlank(message = "Nome é obrigatório")
+    @Size(max = 100, message = "Nome deve ter no máximo 100 caracteres")
     public String nome;
 
     @NotNull(message = "Mês de início é obrigatório")
@@ -21,6 +23,7 @@ public class SazonalidadeDTO {
     @Max(value = 12, message = "Mês de fim deve estar entre 1 e 12")
     public Integer mesFim;
 
+    @Size(max = 500, message = "Descrição deve ter no máximo 500 caracteres")
     public String descricao;
 
     @NotBlank(message = "Nível de impacto é obrigatório")
