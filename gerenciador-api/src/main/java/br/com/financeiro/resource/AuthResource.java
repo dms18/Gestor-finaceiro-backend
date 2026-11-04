@@ -2,6 +2,13 @@ package br.com.financeiro.resource;
 
 import br.com.financeiro.security.DocumentoUtil;
 import br.com.financeiro.security.LoginAttemptService;
+import br.com.financeiro.dto.ForgotPasswordRequest;
+import br.com.financeiro.dto.ResetPasswordRequest;
+import br.com.financeiro.entity.PasswordResetToken;
+import br.com.financeiro.security.ResetMailService;
+import br.com.financeiro.security.ResetRateLimiter;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import br.com.financeiro.dto.LoginRequest;
 import br.com.financeiro.dto.LoginResponse;
 import br.com.financeiro.dto.RegisterRequest;
@@ -31,6 +38,14 @@ public class AuthResource {
 
     @Inject
     LoginAttemptService loginAttempts;
+
+    @Inject
+    ResetRateLimiter resetLimiter;
+
+    @Inject
+    ResetMailService resetMail;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @POST
     @Path("/login")
@@ -115,6 +130,67 @@ public class AuthResource {
         usuario.persist();
 
         return Response.status(Response.Status.CREATED).entity(montarResposta(usuario)).build();
+    }
+
+    @POST
+    @Path("/esqueci-senha")
+    @Transactional
+    public Response esqueciSenha(@Valid ForgotPasswordRequest request) {
+        long espera = resetLimiter.registrar(request.email);
+        if (espera > 0) {
+            return Response.status(429)
+                    .header("Retry-After", String.valueOf(espera))
+                    .entity("{\"message\":\"Muitos pedidos de código. Tente novamente em alguns minutos.\"}")
+                    .build();
+        }
+
+        Usuario usuario = Usuario.findByEmail(request.email);
+        if (usuario != null && usuario.ativo) {
+            PasswordResetToken.invalidarTodos(usuario.email);
+
+            String codigo = String.format("%06d", RANDOM.nextInt(1_000_000));
+            PasswordResetToken token = new PasswordResetToken();
+            token.email = usuario.email;
+            token.codigoHash = passwordService.hash(codigo);
+            token.expiraEm = LocalDateTime.now().plusMinutes(PasswordResetToken.VALIDADE_MINUTOS);
+            token.persist();
+
+            resetMail.enviarCodigo(usuario.email, usuario.nome, codigo);
+        }
+
+        // Resposta idêntica exista o e-mail ou não, para não revelar quais contas existem.
+        return Response.ok("{\"message\":\"Se o e-mail estiver cadastrado, enviamos um código de verificação.\"}").build();
+    }
+
+    @POST
+    @Path("/redefinir-senha")
+    @Transactional
+    public Response redefinirSenha(@Valid ResetPasswordRequest request) {
+        Response invalido = Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"message\":\"Código inválido ou expirado\"}")
+                .build();
+
+        Usuario usuario = Usuario.findByEmail(request.email);
+        if (usuario == null || !usuario.ativo) {
+            return invalido;
+        }
+
+        PasswordResetToken token = PasswordResetToken.findAtivo(usuario.email);
+        if (token == null || token.expirado() || token.tentativas >= PasswordResetToken.MAX_TENTATIVAS) {
+            return invalido;
+        }
+
+        if (!passwordService.verify(request.codigo, token.codigoHash)) {
+            token.tentativas++;
+            return invalido;
+        }
+
+        usuario.senhaHash = passwordService.hash(request.novaSenha);
+        token.usado = true;
+        PasswordResetToken.invalidarTodos(usuario.email);
+        loginAttempts.registrarSucesso(usuario.email);
+
+        return Response.ok("{\"message\":\"Senha redefinida com sucesso\"}").build();
     }
 }
 

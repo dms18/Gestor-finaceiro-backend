@@ -196,3 +196,24 @@ Observações:
 - Trocar a senha do root (foi exposta durante o processo), usar chave SSH e definir `PermitRootLogin prohibit-password`.
 - O tráfego é HTTP puro na rede local; para acesso pela internet seria preciso HTTPS (proxy reverso com certificado) e rever o CORS.
 - A chave JWT antiga e `private-key.pem` ainda estão na árvore do backend; remova-as do Git.
+
+## 12. Pipelines de deploy (GitHub Actions)
+
+Workflows em `.github/workflows/`: `backend.yml` e `frontend.yml`. Cada um só dispara quando mudam arquivos da sua pasta (ou manualmente, em *Run workflow*).
+
+| Evento | O que acontece |
+|---|---|
+| Pull request | Backend: `mvn verify`. Frontend: `ng build --configuration production`. |
+| Push na `main` | Testa/compila → constrói a imagem `linux/arm64` e publica no GHCR (`ghcr.io/<dono>/gestor-api` e `gestor-web`, tags `latest` e SHA) → o runner do servidor baixa a imagem, aplica a tag local `gestor-api:latest`/`gestor-web:latest`, roda `docker compose up -d <serviço>` e confere se responde. |
+
+Como o servidor só é acessível na rede local, o deploy roda em um **runner self-hosted** instalado nele (o build pesado continua nos runners do GitHub).
+
+**Configuração (uma vez):**
+1. Repositório no GitHub com a raiz em `C:\TCC` (monorepo) e a branch `main`.
+2. No servidor, usuário não-root `runner` no grupo `docker`, e o runner instalado em *Settings → Actions → Runners → New self-hosted runner* (Linux ARM64), com a label extra `gestor`. Instale como serviço (`./svc.sh install && ./svc.sh start`). O runner usa ~150 MB de RAM; confira o swap.
+3. O usuário do runner precisa ler `/opt/gestor/.env` e usar `/opt/gestor/docker-compose.yml`.
+4. *Settings → Environments → production*: opcionalmente exigir aprovação manual para o deploy.
+5. Adicione ao `/opt/gestor/.env` as variáveis de e-mail da recuperação de senha: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`.
+6. Para o servidor/GHCR, os pacotes criados pelo workflow ficam privados; o login usa o `GITHUB_TOKEN` do próprio job.
+
+O `docker-compose.yml` não muda: continua usando `gestor-api:latest` e `gestor-web:latest`, então o deploy manual (seção 5) segue funcionando. **Reversão:** `docker tag ghcr.io/<dono>/gestor-api:<sha-antigo> gestor-api:latest && docker compose up -d api`.
