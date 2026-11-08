@@ -15,11 +15,24 @@ services:
       retries: 10
     mem_limit: 220m
 
+  # Relay SMTP próprio (Postfix): entrega os e-mails de recuperação de senha
+  # direto ao servidor de destino (porta 25 de saída liberada neste VPS).
+  # Só escuta na rede interna do Docker, sem porta exposta na internet.
+  smtp:
+    image: boky/postfix:latest
+    restart: unless-stopped
+    environment:
+      ALLOWED_SENDER_DOMAINS: ${SMTP_DOMAIN:-gestor-mei.local}
+    mem_limit: 64m
+
   api:
     image: gestor-api:latest
+    build:
+      context: ../backend/gerenciador-api
     restart: unless-stopped
     depends_on:
       db: { condition: service_healthy }
+      smtp: { condition: service_started }
     environment:
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:mysql://db:3306/gestor_mei
       QUARKUS_DATASOURCE_USERNAME: gestor
@@ -28,12 +41,10 @@ services:
       QUARKUS_HTTP_CORS_ORIGINS: ${CORS_ORIGIN}
       SMALLRYE_JWT_SIGN_KEY_LOCATION: file:/keys/privateKey.pem
       MP_JWT_VERIFY_PUBLICKEY_LOCATION: file:/keys/publicKey.pem
-      QUARKUS_MAILER_HOST: ${SMTP_HOST}
-      QUARKUS_MAILER_PORT: ${SMTP_PORT:-587}
-      QUARKUS_MAILER_USERNAME: ${SMTP_USER}
-      QUARKUS_MAILER_PASSWORD: ${SMTP_PASSWORD}
-      QUARKUS_MAILER_FROM: ${SMTP_FROM}
-      QUARKUS_MAILER_START_TLS: REQUIRED
+      QUARKUS_MAILER_HOST: smtp
+      QUARKUS_MAILER_PORT: "25"
+      QUARKUS_MAILER_FROM: ${SMTP_FROM:-no-reply@gestor-mei.local}
+      QUARKUS_MAILER_START_TLS: DISABLED
       QUARKUS_OTEL_SDK_DISABLED: "true"
       QUARKUS_LOG_FILE_ENABLE: "true"
       QUARKUS_LOG_FILE_PATH: /var/log/gerenciador/app.log
@@ -48,6 +59,12 @@ services:
 
   web:
     image: gestor-web:latest
+    build:
+      context: ../Gestor-Financeiro-FRONTEND
+      args:
+        CONFIGURATION: production
+        GIT_SHA: ${GIT_SHA:-vps}
+        BUILD_DATE: ${BUILD_DATE:-}
     restart: unless-stopped
     depends_on: [api]
     ports: ["80:80"]
