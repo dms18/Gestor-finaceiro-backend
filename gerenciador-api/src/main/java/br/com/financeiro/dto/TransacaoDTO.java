@@ -1,6 +1,8 @@
 package br.com.financeiro.dto;
 
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,6 +34,18 @@ public class TransacaoDTO {
     public Long categoriaId;
     public Long contaId;
     public Long usuarioId;
+
+    /** Entrada: se true, "valor" é o montante total e será dividido em "numeroParcelas" parcelas mensais. */
+    public Boolean parcelado;
+
+    @Min(value = 2, message = "O parcelamento exige no mínimo 2 parcelas")
+    @Max(value = 60, message = "O parcelamento permite no máximo 60 parcelas")
+    public Integer numeroParcelas;
+
+    /** Saída: dados da parcela (null em transações avulsas). */
+    public String grupoParcelas;
+    public Integer parcelaNumero;
+    public Integer totalParcelas;
 
     public TransacaoDTO() {}
 

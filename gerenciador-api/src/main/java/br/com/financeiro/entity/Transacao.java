@@ -45,6 +45,17 @@ public class Transacao extends PanacheEntity {
     @JoinColumn(name = "conta_id")
     public Conta conta;
 
+    /** Identifica as parcelas de uma mesma compra/venda parcelada (null = transação avulsa). */
+    @Column(name = "grupo_parcelas", length = 36)
+    public String grupoParcelas;
+
+    /** Número desta parcela (1..totalParcelas). */
+    @Column(name = "parcela_numero")
+    public Integer parcelaNumero;
+
+    @Column(name = "total_parcelas")
+    public Integer totalParcelas;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     public Usuario usuario;

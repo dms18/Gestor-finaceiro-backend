@@ -109,6 +109,13 @@ public class ContaResource {
                     .build();
         }
 
+        long reservas = br.com.financeiro.entity.Sazonalidade.count("contaDebito.id", id);
+        if (reservas > 0) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity("{\"message\":\"Não é possível excluir: esta conta é a conta para débito de " + reservas + " período(s) de sazonalidade.\"}")
+                    .build();
+        }
+
         conta.delete();
         return Response.noContent().build();
     }

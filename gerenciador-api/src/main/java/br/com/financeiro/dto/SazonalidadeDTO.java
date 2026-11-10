@@ -1,5 +1,8 @@
 package br.com.financeiro.dto;
 
+import java.math.BigDecimal;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -30,6 +33,18 @@ public class SazonalidadeDTO {
     public String nivelImpacto;
 
     public Long usuarioId;
+
+    /** Reserva de caixa (opcional, mas os três campos andam juntos). */
+    public java.time.LocalDate dataAlvo;
+
+    @DecimalMin(value = "0.01", message = "Caixa necessário deve ser maior que zero")
+    @Digits(integer = 13, fraction = 2, message = "Caixa necessário inválido: use até 2 casas decimais")
+    public BigDecimal valorNecessario;
+
+    public Long contaDebitoId;
+
+    /** Somente leitura: nome da conta de débito, para exibir na lista. */
+    public String contaDebitoNome;
 
     public SazonalidadeDTO() {}
 
