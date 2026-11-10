@@ -31,6 +31,12 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Sentry: envia logs ERROR/exceções para o Sentry (desligado sem DSN) -->
+        <dependency>
+            <groupId>io.quarkiverse.loggingsentry</groupId>
+            <artifactId>quarkus-logging-sentry</artifactId>
+            <version>2.3.6</version>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest</artifactId>
@@ -92,6 +98,12 @@
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Banco em memória só nos testes: não toca no MariaDB de desenvolvimento/produção -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
