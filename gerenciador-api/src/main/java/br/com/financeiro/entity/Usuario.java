@@ -46,6 +46,13 @@ public class Usuario extends PanacheEntity {
 
     public boolean ativo = true;
 
+    /**
+     * Versão das sessões. Vai no JWT (claim "ver") e é conferida a cada requisição; ao redefinir a
+     * senha ela sobe e todos os tokens emitidos antes deixam de valer. Nulo (contas antigas) = 0.
+     */
+    @Column(name = "token_versao")
+    public Integer tokenVersao = 0;
+
     /** Foto de perfil armazenada como data URL base64 (ex.: "data:image/jpeg;base64,..."). */
     @Lob
     @Column(name = "foto_perfil", columnDefinition = "LONGTEXT")

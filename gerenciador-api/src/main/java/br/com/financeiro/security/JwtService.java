@@ -16,7 +16,7 @@ public class JwtService {
     @ConfigProperty(name = "mp.jwt.verify.audiences", defaultValue = "gestor-mei-app")
     String audience;
 
-    public String generateToken(Long usuarioId, String email) {
+    public String generateToken(Long usuarioId, String email, int versaoSessao) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(Duration.ofHours(24));
 
@@ -25,6 +25,7 @@ public class JwtService {
                 .subject(email)
                 .claim("id", usuarioId)
                 .claim("email", email)
+                .claim("ver", versaoSessao)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .sign();

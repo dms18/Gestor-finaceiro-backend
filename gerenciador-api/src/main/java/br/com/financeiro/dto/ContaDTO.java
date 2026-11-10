@@ -1,5 +1,6 @@
 package br.com.financeiro.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,7 @@ public class ContaDTO {
     public String tipo;
 
     @NotNull(message = "Saldo é obrigatório")
+    @DecimalMin(value = "0.00", message = "Saldo inicial não pode ser negativo")
     @Digits(integer = 13, fraction = 2, message = "Saldo inválido: use até 2 casas decimais e no máximo 13 dígitos inteiros")
     public BigDecimal saldo;
 

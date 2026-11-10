@@ -5,6 +5,7 @@ import br.com.financeiro.security.LoginAttemptService;
 import br.com.financeiro.dto.ForgotPasswordRequest;
 import br.com.financeiro.dto.ResetPasswordRequest;
 import br.com.financeiro.entity.PasswordResetToken;
+import br.com.financeiro.security.ResetAttemptService;
 import br.com.financeiro.security.ResetMailService;
 import br.com.financeiro.security.ResetRateLimiter;
 import java.security.SecureRandom;
@@ -19,6 +20,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
+import io.vertx.core.http.HttpServerRequest;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -45,13 +48,29 @@ public class AuthResource {
     @Inject
     ResetMailService resetMail;
 
+    @Inject
+    ResetAttemptService resetAttempts;
+
+    @Context
+    HttpServerRequest httpRequest;
+
+    /**
+     * IP do cliente. Em produção a API só é alcançável pelo nginx e o Quarkus aplica o X-Forwarded-For
+     * dele (proxy-address-forwarding), então este é o IP real de quem chamou.
+     */
+    private String ipDoCliente() {
+        var endereco = httpRequest == null ? null : httpRequest.remoteAddress();
+        return endereco == null ? "" : endereco.host();
+    }
+
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @POST
     @Path("/login")
     @Transactional
     public Response login(@Valid LoginRequest request) {
-        long bloqueio = loginAttempts.segundosBloqueado(request.email);
+        String ip = ipDoCliente();
+        long bloqueio = loginAttempts.segundosBloqueado(request.email, ip);
         if (bloqueio > 0) {
             return Response.status(429)
                     .header("Retry-After", String.valueOf(bloqueio))
@@ -62,25 +81,28 @@ public class AuthResource {
         Usuario usuario = Usuario.findByEmail(request.email);
 
         if (usuario == null) {
-            loginAttempts.registrarFalha(request.email);
+            // gasta o mesmo tempo de uma verificação real: o tempo não pode revelar que a conta não existe
+            passwordService.gastarTempoComoSeVerificasse(request.senha);
+            loginAttempts.registrarFalha(request.email, ip);
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("{\"message\":\"Email ou senha incorretos\"}")
                     .build();
         }
 
         if (!passwordService.verify(request.senha, usuario.senhaHash)) {
-            loginAttempts.registrarFalha(request.email);
+            loginAttempts.registrarFalha(request.email, ip);
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("{\"message\":\"Email ou senha incorretos\"}")
                     .build();
         }
 
-        loginAttempts.registrarSucesso(request.email);
+        loginAttempts.registrarSucesso(request.email, ip);
         return Response.ok(montarResposta(usuario)).build();
     }
 
     private LoginResponse montarResposta(Usuario usuario) {
-        String token = jwtService.generateToken(usuario.id, usuario.email);
+        String token = jwtService.generateToken(usuario.id, usuario.email,
+                usuario.tokenVersao == null ? 0 : usuario.tokenVersao);
         return new LoginResponse(
                 token,
                 jwtService.getExpirationTime(),
@@ -156,6 +178,9 @@ public class AuthResource {
             token.persist();
 
             resetMail.enviarCodigo(usuario.email, usuario.nome, codigo);
+        } else {
+            // conta inexistente ou inativa: faz o mesmo trabalho caro, para o tempo não revelar a diferença
+            passwordService.gastarTempoComoSeVerificasse(request.email);
         }
 
         // Resposta idêntica exista o e-mail ou não, para não revelar quais contas existem.
@@ -176,19 +201,25 @@ public class AuthResource {
         }
 
         PasswordResetToken token = PasswordResetToken.findAtivo(usuario.email);
-        if (token == null || token.expirado() || token.tentativas >= PasswordResetToken.MAX_TENTATIVAS) {
+        if (token == null || token.expirado()) {
             return invalido;
         }
 
+        // Reserva ATÔMICA de uma tentativa (o próprio banco incrementa): requisições simultâneas não
+        // ganham palpites extras. Só quem conseguiu a reserva chega a verificar o código.
+        if (!resetAttempts.reservarTentativa(token.id)) {
+            return invalido;
+        }
         if (!passwordService.verify(request.codigo, token.codigoHash)) {
-            token.tentativas++;
             return invalido;
         }
 
         usuario.senhaHash = passwordService.hash(request.novaSenha);
+        // derruba todas as sessões já emitidas: um token roubado não sobrevive à troca de senha
+        usuario.tokenVersao = (usuario.tokenVersao == null ? 0 : usuario.tokenVersao) + 1;
         token.usado = true;
         PasswordResetToken.invalidarTodos(usuario.email);
-        loginAttempts.registrarSucesso(usuario.email);
+        loginAttempts.liberarEmail(usuario.email);
 
         return Response.ok("{\"message\":\"Senha redefinida com sucesso\"}").build();
     }
