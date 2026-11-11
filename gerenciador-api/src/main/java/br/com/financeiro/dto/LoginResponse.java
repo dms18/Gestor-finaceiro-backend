@@ -17,6 +17,8 @@ public class LoginResponse {
         public String email;
         public String perfil;
         public String interfaceInicial;
+        /** true para o administrador (flag ic_adm no banco); o app só mostra o painel na versão web. */
+        public boolean admin;
 
         public UsuarioDTO(Long id, String nome, String email, String perfil, String interfaceInicial) {
             this.id = id;

@@ -47,6 +47,13 @@ public class Usuario extends PanacheEntity {
     public boolean ativo = true;
 
     /**
+     * Administrador do sistema (coluna ic_adm = 1). Libera o painel /admin, só na versão web. Tipo Boolean
+     * (wrapper) para tolerar linhas antigas com NULL (a coluna é criada depois dos usuários); NULL = não.
+     */
+    @Column(name = "ic_adm")
+    public Boolean icAdm = false;
+
+    /**
      * Versão das sessões. Vai no JWT (claim "ver") e é conferida a cada requisição; ao redefinir a
      * senha ela sobe e todos os tokens emitidos antes deixam de valer. Nulo (contas antigas) = 0.
      */

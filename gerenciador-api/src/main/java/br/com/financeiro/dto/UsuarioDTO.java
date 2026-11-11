@@ -10,6 +10,8 @@ public class UsuarioDTO {
     public boolean ativo;
     public String fotoPerfil;
     public String interfaceInicial;
+    /** Somente leitura: vem da flag ic_adm. Qualquer valor enviado pelo cliente é ignorado. */
+    public boolean admin;
 
     public UsuarioDTO() {}
 

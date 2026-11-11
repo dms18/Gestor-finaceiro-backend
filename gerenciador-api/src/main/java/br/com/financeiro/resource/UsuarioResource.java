@@ -152,11 +152,13 @@ public class UsuarioResource {
     }
 
     private UsuarioDTO toDTO(Usuario usuario) {
-        return new UsuarioDTO(
+        UsuarioDTO dto = new UsuarioDTO(
                 usuario.id, usuario.nome, usuario.email,
                 usuario.cpf, usuario.cnpj, usuario.perfil.toString(), usuario.ativo,
                 usuario.fotoPerfil,
                 usuario.interfaceInicial != null ? usuario.interfaceInicial.toString() : null
         );
+        dto.admin = Boolean.TRUE.equals(usuario.icAdm);
+        return dto;
     }
 }

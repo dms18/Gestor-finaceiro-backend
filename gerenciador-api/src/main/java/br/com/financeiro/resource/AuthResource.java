@@ -104,7 +104,7 @@ public class AuthResource {
     private LoginResponse montarResposta(Usuario usuario) {
         String token = jwtService.generateToken(usuario.id, usuario.email,
                 usuario.tokenVersao == null ? 0 : usuario.tokenVersao);
-        return new LoginResponse(
+        LoginResponse resposta = new LoginResponse(
                 token,
                 jwtService.getExpirationTime(),
                 new LoginResponse.UsuarioDTO(
@@ -115,6 +115,8 @@ public class AuthResource {
                         usuario.interfaceInicial != null ? usuario.interfaceInicial.toString() : null
                 )
         );
+        resposta.usuario.admin = Boolean.TRUE.equals(usuario.icAdm);
+        return resposta;
     }
 
     @POST
