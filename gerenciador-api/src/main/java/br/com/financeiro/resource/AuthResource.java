@@ -4,6 +4,7 @@ import br.com.financeiro.security.DocumentoUtil;
 import br.com.financeiro.security.LoginAttemptService;
 import br.com.financeiro.dto.ForgotPasswordRequest;
 import br.com.financeiro.dto.ResetPasswordRequest;
+import br.com.financeiro.dto.VerifyCodeRequest;
 import br.com.financeiro.entity.PasswordResetToken;
 import br.com.financeiro.security.ResetAttemptService;
 import br.com.financeiro.security.ResetMailService;
@@ -31,7 +32,7 @@ import jakarta.ws.rs.core.Response;
 public class AuthResource {
 
     /** Versão vigente dos Termos de Uso / Política de Privacidade aceita no cadastro. */
-    public static final String TERMOS_VERSAO = "1.0 (2026-08-24)";
+    public static final String TERMOS_VERSAO = "1.1 (2026-11-10)";
 
     @Inject
     JwtService jwtService;
@@ -187,37 +188,47 @@ public class AuthResource {
         return Response.ok("{\"message\":\"Se o e-mail estiver cadastrado, enviamos um código de verificação.\"}").build();
     }
 
+    /** Confere o código sem trocar a senha (o app só pede a nova senha depois de um código válido). */
+    @POST
+    @Path("/verificar-codigo")
+    @Transactional
+    public Response verificarCodigo(@Valid VerifyCodeRequest request) {
+        if (!codigoValido(request.email, request.codigo)) {
+            return codigoInvalido();
+        }
+        return Response.ok("{\"message\":\"Código válido\"}").build();
+    }
+
+    private Response codigoInvalido() {
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"message\":\"Código inválido ou expirado\"}")
+                .build();
+    }
+
+    /** Valida e-mail + código, consumindo uma tentativa de forma atômica. */
+    private boolean codigoValido(String email, String codigo) {
+        // Reserva ATÔMICA de uma tentativa em transação própria (o banco incrementa): requisições simultâneas
+        // não ganham palpites extras. Precisa vir ANTES de qualquer leitura nesta transação (ver
+        // ResetAttemptService). Só quem conseguiu a reserva chega a verificar o código.
+        String hash = resetAttempts.reservarTentativa(email);
+        return hash != null && passwordService.verify(codigo, hash);
+    }
+
     @POST
     @Path("/redefinir-senha")
     @Transactional
     public Response redefinirSenha(@Valid ResetPasswordRequest request) {
-        Response invalido = Response.status(Response.Status.BAD_REQUEST)
-                .entity("{\"message\":\"Código inválido ou expirado\"}")
-                .build();
-
+        if (!codigoValido(request.email, request.codigo)) {
+            return codigoInvalido();
+        }
         Usuario usuario = Usuario.findByEmail(request.email);
-        if (usuario == null || !usuario.ativo) {
-            return invalido;
-        }
-
-        PasswordResetToken token = PasswordResetToken.findAtivo(usuario.email);
-        if (token == null || token.expirado()) {
-            return invalido;
-        }
-
-        // Reserva ATÔMICA de uma tentativa (o próprio banco incrementa): requisições simultâneas não
-        // ganham palpites extras. Só quem conseguiu a reserva chega a verificar o código.
-        if (!resetAttempts.reservarTentativa(token.id)) {
-            return invalido;
-        }
-        if (!passwordService.verify(request.codigo, token.codigoHash)) {
-            return invalido;
-        }
 
         usuario.senhaHash = passwordService.hash(request.novaSenha);
         // derruba todas as sessões já emitidas: um token roubado não sobrevive à troca de senha
         usuario.tokenVersao = (usuario.tokenVersao == null ? 0 : usuario.tokenVersao) + 1;
-        token.usado = true;
+        // Esta transação só lê o usuário/token DEPOIS da reserva da tentativa (outra transação), então o
+        // UPDATE em massa abaixo não conflita com ela. Ele
+        // marca este token (e os demais pendentes) como usado.
         PasswordResetToken.invalidarTodos(usuario.email);
         loginAttempts.liberarEmail(usuario.email);
 

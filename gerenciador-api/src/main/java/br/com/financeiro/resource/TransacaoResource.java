@@ -30,7 +30,9 @@ public class TransacaoResource {
     @GET
     public Response listar(@QueryParam("tipoPessoa") String tipoPessoa,
                           @QueryParam("mes") Integer mes,
-                          @QueryParam("ano") Integer ano) {
+                          @QueryParam("ano") Integer ano,
+                          @QueryParam("inicio") java.time.LocalDate inicio,
+                          @QueryParam("fim") java.time.LocalDate fim) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -61,7 +63,9 @@ public class TransacaoResource {
     @Path("/resumo")
     public Response resumo(@QueryParam("tipoPessoa") String tipoPessoa,
                           @QueryParam("mes") Integer mes,
-                          @QueryParam("ano") Integer ano) {
+                          @QueryParam("ano") Integer ano,
+                          @QueryParam("inicio") java.time.LocalDate inicio,
+                          @QueryParam("fim") java.time.LocalDate fim) {
         Long usuarioId = userPrincipal.getUserId();
         if (usuarioId == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -80,7 +84,18 @@ public class TransacaoResource {
         // Saldo atual: saldo inicial das contas + movimentações até hoje. Lançamentos futuros
         // não contam. Se o período pedido terminou antes de hoje, vale o fim desse período.
         java.time.LocalDate corte = java.time.LocalDate.now();
-        if (mes != null && ano != null) {
+        // Intervalo livre (dia específico ou período): inicio/fim têm precedência sobre mes/ano.
+        boolean intervalo = inicio != null || fim != null;
+        if (intervalo) {
+            if (inicio != null && fim != null && fim.isBefore(inicio)) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"message\":\"A data final deve ser igual ou posterior à inicial\"}")
+                        .build();
+            }
+            if (fim != null && fim.isBefore(corte)) {
+                corte = fim;
+            }
+        } else if (mes != null && ano != null) {
             java.time.LocalDate fimDoPeriodo = java.time.YearMonth.of(ano, mes).atEndOfMonth();
             if (fimDoPeriodo.isBefore(corte)) {
                 corte = fimDoPeriodo;
@@ -91,7 +106,12 @@ public class TransacaoResource {
                 .filter(t -> !t.data.isAfter(corteSaldo))
                 .collect(Collectors.toList());
 
-        if (mes != null && ano != null) {
+        if (intervalo) {
+            transacoes = transacoes.stream()
+                    .filter(t -> (inicio == null || !t.data.isBefore(inicio))
+                            && (fim == null || !t.data.isAfter(fim)))
+                    .collect(Collectors.toList());
+        } else if (mes != null && ano != null) {
             transacoes = transacoes.stream()
                     .filter(t -> t.data.getMonthValue() == mes && t.data.getYear() == ano)
                     .collect(Collectors.toList());
